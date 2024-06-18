@@ -1,5 +1,3 @@
-const transactions = require("./tx2.json");
-const utxos = require("./UTXO2.json");
 const walletAddressType = "P2WSH" // fetch from the caravan wallet configuration
 
 // Function to call the Bitcoin JSON-RPC API
@@ -28,7 +26,7 @@ async function getReceivedByAddress(address, minConf = 6) {
     return data.result;
 }
 
-function p_score(transaction) {
+function io_score(transaction) {
     let num_input = transaction.vin.length;
     let num_output = transaction.vout.length;
 
@@ -156,7 +154,7 @@ function combined_utxo_factor(utxos) {
 }
 
 function privacy_score (transactions, utxos) {
-    let privacy_score = transactions.reduce((sum, tx) => sum + p_score(tx), 0) / transactions.length;
+    let privacy_score = transactions.reduce((sum, tx) => sum + io_score(tx), 0) / transactions.length;
     privacy_score = (privacy_score * (1 - (0.5 * reuse_factor(utxos)))) + (0.10 * (1 - reuse_factor(utxos)));
     privacy_score = privacy_score * (1-address_type_factor(transactions));
     privacy_score = privacy_score + 0.1 * combined_utxo_factor(utxos)
