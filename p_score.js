@@ -1,14 +1,8 @@
+const network = require('./network.js');
 const walletAddressType = "P2WSH" // fetch from the caravan wallet configuration
 
-// Function to call the Bitcoin JSON-RPC API
+// Check if address belongs to wallet (Bitcoin-RPC)
 async function getReceivedByAddress(address, minConf = 6) {
-    const url = "http://127.0.0.1:18443/wallet/cormorant";
-    const username = "Harshil-Jani";
-    const password = "N0KjUIdsrwyu2KfK4ign1Rf-PLovHDt9ctWQC366iFk";
-    const headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ":" + password));
-    headers.set('Content-Type', 'text/plain');
-
     const body = JSON.stringify({
         jsonrpc: "1.0",
         id: "curltext",
@@ -16,9 +10,9 @@ async function getReceivedByAddress(address, minConf = 6) {
         params: [address, minConf]
     });
 
-    const response = await fetch(url, {
+    const response = await fetch(network.url, {
         method: 'POST',
-        headers: headers,
+        headers: network.headers,
         body: body
     });
 
@@ -26,6 +20,7 @@ async function getReceivedByAddress(address, minConf = 6) {
     return data.result;
 }
 
+// Scoring on basis of number of inputs and outputs
 function io_score(transaction) {
     let num_input = transaction.vin.length;
     let num_output = transaction.vout.length;
@@ -112,21 +107,15 @@ function address_type_factor(transactions) {
 }
 
 function utxo_spread_factor(utxos) {
-    // Step 1: Extract amounts
     const amounts = utxos.map(utxo => utxo.amount);
-
-    // Step 2: Calculate mean (μ)
     const mean = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
-
-    // Step 3: Calculate standard deviation (σ)
     const variance = amounts.reduce((sum, amount) => sum + Math.pow(amount - mean, 2), 0) / amounts.length;
     const stdDev = Math.sqrt(variance);
-
-    // Step 4: Compute z-scores
-    const updatedUtxos = utxos.map(utxo => {
-        const zScore = (utxo.amount - mean) / stdDev;
-        return { ...utxo, z_score: zScore };
-    });
+    // TODO : Figure out something to do with Z-scores
+    // const updatedUtxos = utxos.map(utxo => {
+    //     const zScore = (utxo.amount - mean) / stdDev;
+    //     return { ...utxo, z_score: zScore };
+    // });
     return stdDev / (stdDev + 1);
 }
 
@@ -160,5 +149,3 @@ function privacy_score (transactions, utxos) {
     privacy_score = privacy_score + 0.1 * combined_utxo_factor(utxos)
     return privacy_score
 }
-
-console.log(privacy_score(transactions,utxos));

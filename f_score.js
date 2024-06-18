@@ -1,5 +1,5 @@
 const network = require("./network.js");
-// const transactions = require("./Dataset1.json");
+
 // Obtain the transaction hex to decode it
 async function getTxHex(txid) {
     const body = JSON.stringify({
@@ -82,25 +82,28 @@ async function getFeeRatePercentileForTransaction(timestamp, feeRate) {
     }
 }
 
-function feeScoring(transactions) {
+function RFS(transactions) {
+    let sum_RFS = 0;
+    let send_count = 0;
     transactions.forEach(async tx => {
         if (tx.category == "send") {
+            send_count++;
             let fee_rate = await getFeeRateForTransaction(tx);
-            console.log(fee_rate + " sats/vByte");
             let RFS = await getFeeRatePercentileForTransaction(tx.blocktime, fee_rate);
-            console.log(RFS);
+            sum_RFS += RFS;
         }
     });
+    return (sum_RFS/send_count);
 }
 
 function feestoAmountPercentScore(transactions) {
     let FAPS = 0;
-    let tx_count = 0;
+    let send_count = 0;
     transactions.forEach(tx => {
         if (tx.category === "send") {
             FAPS += (tx.fee / tx.amount);
-            tx_count++;
+            send_count++;
         }
     });
-    console.log(FAPS / tx_count);
+    return (FAPS/send_count);
 }
