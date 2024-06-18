@@ -149,3 +149,14 @@ function privacy_score (transactions, utxos) {
     privacy_score = privacy_score + 0.1 * combined_utxo_factor(utxos)
     return privacy_score
 }
+
+module.exports = {
+    getReceivedByAddress,
+    io_score,
+    reuse_factor,
+    address_type_factor,
+    utxo_spread_factor,
+    utxo_set_length_weight,
+    combined_utxo_factor,
+    privacy_score
+};
