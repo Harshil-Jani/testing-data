@@ -1,6 +1,6 @@
 // Privacy Scoring (p_score.js)
 const sampleTransactions = require('./sampleTransactions');
-const transactions = require('./tx1.json');
+const transactions = require('./tx2.json');
 const { io_score } = require("./p_score")
 
 const runTests = () => {
@@ -20,5 +20,3 @@ const runTests = () => {
 
     console.log('All tests passed!');
 };
-
-runTests();

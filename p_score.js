@@ -2,6 +2,9 @@ const network = require('./network.js');
 const walletAddressType = "P2WSH" // fetch from the caravan wallet configuration
 
 // Check if address belongs to wallet (Bitcoin-RPC)
+// In bitcoin RPC we can check the received by address call.
+// If this fails, The address does not belong to the wallet.
+
 async function getReceivedByAddress(address, minConf = 6) {
     const body = JSON.stringify({
         jsonrpc: "1.0",
@@ -17,8 +20,12 @@ async function getReceivedByAddress(address, minConf = 6) {
     });
 
     const data = await response.json();
-    return data.result;
+    if(data.result){
+        return true;
+    }
+    return false;
 }
+
 
 // Scoring on basis of number of inputs and outputs
 function io_score(transaction) {
@@ -43,22 +50,19 @@ function io_score(transaction) {
             score = (1 / num_input);
         } else {
             // Coin Join
-            score = ((0.75 * num_output) + (0.25 * (num_input - 1))) / (num_input + num_output);
+            score = 0.75 * (Math.pow(num_output, 2) / num_input) / (1 + (Math.pow(num_output, 2) / num_input));
         }
     }
 
-    let self = true;
+    // TODO : d.f 1.5 is assumed to be used for any form of self payment.
+    // Ideally it should be in proportion to what number of address or what amount is reused.
     transaction.vout.forEach(async output => {
         let address = output.scriptPubKey.address;
         let a = await getReceivedByAddress(address);
-        if(a===null){
-            // Not a self payment
-            self = false;
+        if (a === true) {
+            return score * 1.5;
         }
-    })
-    if(self){
-        return score*1.5;
-    }
+    });
     return score;
 }
 
@@ -136,17 +140,17 @@ function utxo_set_length_weight(utxos) {
     return weight;
 }
 
-function combined_utxo_factor(utxos) {
+function utxo_value_weightage_factor(utxos) {
     let W = utxo_set_length_weight(utxos);
     let USF = utxo_spread_factor(utxos);
-    return (USF - 0.1) + (W - 0.5);
+    return (USF + W)*0.15 -0.15;
 }
 
-function privacy_score (transactions, utxos) {
+function privacy_score(transactions, utxos) {
     let privacy_score = transactions.reduce((sum, tx) => sum + io_score(tx), 0) / transactions.length;
     privacy_score = (privacy_score * (1 - (0.5 * reuse_factor(utxos)))) + (0.10 * (1 - reuse_factor(utxos)));
-    privacy_score = privacy_score * (1-address_type_factor(transactions));
-    privacy_score = privacy_score + 0.1 * combined_utxo_factor(utxos)
+    privacy_score = privacy_score * (1 - address_type_factor(transactions));
+    privacy_score = privacy_score + 0.1 * utxo_value_weightage_factor(utxos)
     return privacy_score
 }
 
@@ -157,6 +161,6 @@ module.exports = {
     address_type_factor,
     utxo_spread_factor,
     utxo_set_length_weight,
-    combined_utxo_factor,
+    utxo_value_weightage_factor,
     privacy_score
 };
